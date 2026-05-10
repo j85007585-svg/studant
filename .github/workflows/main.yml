@@ -10,37 +10,35 @@ jobs:
       - name: Install Unrar
         run: sudo apt-get update && sudo apt-get install -y unrar
 
-      - name: Force Clean and Structure
+      - name: Comprehensive Extraction and Fix
         run: |
-          # 1. فك ضغط أي ملف rar موجود
+          # فك ضغط أي ملف rar في أي مكان
           find . -name "*.rar" -exec unrar x -o+ {} . \;
           
-          # 2. البحث عن ملفات التشغيل ونقلها للمكان الصحيح غصباً عنها
+          # البحث عن ملفات Gradle في كل المستويات ونقلها للمجلد الرئيسي
           find . -name "gradlew" -exec cp {} . \;
           find . -name "settings.gradle*" -exec cp {} . \;
           find . -name "build.gradle*" -exec cp {} . \;
           find . -name "gradle.properties" -exec cp {} . \;
           find . -name "gradle" -type d -exec cp -r {} . \;
           
-          # 3. التأكد من وجود ملف settings لربط المشروع
-          if [ ! -f "settings.gradle.kts" ] && [ ! -f "settings.gradle" ]; then
-            echo "include(':app')" > settings.gradle.kts
-          fi
-          
+          # إصلاح صلاحيات الملفات
           chmod +x gradlew || true
 
-      - name: set up JDK 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: gradle
 
-      - name: Build APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: Build APK with Force
+        run: |
+          # محاولة البناء مع تجاهل الأخطاء غير القاتلة
+          ./gradlew assembleDebug --no-daemon --stacktrace
           
-      - name: Upload APK
+      - name: Upload Final APK
         uses: actions/upload-artifact@v4
         with:
-          name: my-game-apk
+          name: snake-game-complete
           path: "**/build/outputs/apk/debug/*.apk"

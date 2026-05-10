@@ -1,44 +1,52 @@
-name: Build Android APK
+name: The Force Build
 on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout Everything
         uses: actions/checkout@v4
 
-      - name: Install Unrar
-        run: sudo apt-get update && sudo apt-get install -y unrar
-
-      - name: Comprehensive Extraction and Fix
+      - name: Preparation
         run: |
-          # فك ضغط أي ملف rar في أي مكان
+          sudo apt-get update
+          sudo apt-get install -y unrar zip
+
+      - name: The Great Extraction
+        run: |
+          # فك ضغط أي ملف مضغوط تجده في طريقك
           find . -name "*.rar" -exec unrar x -o+ {} . \;
-          
-          # البحث عن ملفات Gradle في كل المستويات ونقلها للمجلد الرئيسي
+          find . -name "*.zip" -exec unzip -o {} -d . \;
+
+      - name: The Project Reconstructor
+        run: |
+          # البحث الشامل عن الملفات الحيوية ونقلها للمركز
           find . -name "gradlew" -exec cp {} . \;
           find . -name "settings.gradle*" -exec cp {} . \;
           find . -name "build.gradle*" -exec cp {} . \;
           find . -name "gradle.properties" -exec cp {} . \;
-          find . -name "gradle" -type d -exec cp -r {} . \;
           
-          # إصلاح صلاحيات الملفات
-          chmod +x gradlew || true
+          # نقل مجلد الـ Gradle الأساسي
+          GRADLE_DIR=$(find . -name "wrapper" -type d | head -n 1 | sed 's/\/wrapper//')
+          if [ ! -z "$GRADLE_DIR" ]; then cp -r $GRADLE_DIR . ; fi
+          
+          # إعطاء صلاحية التشغيل القصوى
+          chmod -R 777 .
+          chmod +x gradlew
 
-      - name: Set up JDK 17
+      - name: Setup Java Environment
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      - name: Build APK with Force
+      - name: THE FINAL BUILD
         run: |
-          # محاولة البناء مع تجاهل الأخطاء غير القاتلة
-          ./gradlew assembleDebug --no-daemon --stacktrace
-          
-      - name: Upload Final APK
+          # بناء التطبيق مع تنظيف كامل للمخلفات
+          ./gradlew clean assembleDebug --stacktrace --no-daemon
+
+      - name: Artifact Delivery
         uses: actions/upload-artifact@v4
         with:
-          name: snake-game-complete
+          name: snake-game-ultimate
           path: "**/build/outputs/apk/debug/*.apk"

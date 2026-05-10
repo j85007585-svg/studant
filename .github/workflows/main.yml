@@ -10,19 +10,19 @@ jobs:
       - name: Install Unrar
         run: sudo apt-get update && sudo apt-get install -y unrar
 
-      - name: Force Fix Project Structure
+      - name: Global File Extraction and Cleanup
         run: |
-          # فك ضغط الملف
-          unrar x app.rar || true
+          # فك الضغط في المجلد الرئيسي
+          unrar x -o+ app.rar || true
           
-          # البحث عن ملف gradlew في أي مكان ونقله للواجهة الرئيسية
-          find . -name "gradlew" -exec cp {} . \;
-          find . -name "settings.gradle.kts" -exec cp {} . \;
-          find . -name "build.gradle.kts" -exec cp {} . \;
-          find . -name "gradle" -type d -exec cp -r {} . \;
+          # سحب كل ملفات المشروع من المجلدات الفرعية (مثل studant أو app) للواجهة
+          find . -maxdepth 3 -name "gradlew" -exec cp {} . \;
+          find . -maxdepth 3 -name "settings.gradle*" -exec cp {} . \;
+          find . -maxdepth 3 -name "build.gradle*" -exec cp {} . \;
+          find . -maxdepth 3 -name "gradle" -type d -exec cp -r {} . \;
           
-          # التأكد من وجود ملف settings إذا فقدناه
-          if [ ! -f "settings.gradle.kts" ]; then
+          # التأكد من وجود ملف settings.gradle لربط المجلدات
+          if [ ! -f "settings.gradle.kts" ] && [ ! -f "settings.gradle" ]; then
             echo "include(':app')" > settings.gradle.kts
           fi
           
@@ -36,10 +36,10 @@ jobs:
           cache: gradle
 
       - name: Build APK
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
           
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: snake-game-final
+          name: snake-game-debug
           path: "**/build/outputs/apk/debug/*.apk"

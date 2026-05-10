@@ -10,20 +10,23 @@ jobs:
       - name: Install Unrar
         run: sudo apt-get update && sudo apt-get install -y unrar
 
-      - name: Extract and Fix Files
+      - name: Force Fix Project Structure
         run: |
-          # 1. فك ضغط ملف app.rar
+          # فك ضغط الملف
           unrar x app.rar || true
-          # 2. إذا كان الكود داخل مجلد اسمه app، سنخرجه للخارج
-          if [ -d "app" ]; then
-            cp -r app/* . || true
-          fi
-          # 3. التأكد من وجود ملف الإعدادات الأساسي
-          if [ ! -f "settings.gradle.kts" ] && [ ! -f "settings.gradle" ]; then
+          
+          # البحث عن ملف gradlew في أي مكان ونقله للواجهة الرئيسية
+          find . -name "gradlew" -exec cp {} . \;
+          find . -name "settings.gradle.kts" -exec cp {} . \;
+          find . -name "build.gradle.kts" -exec cp {} . \;
+          find . -name "gradle" -type d -exec cp -r {} . \;
+          
+          # التأكد من وجود ملف settings إذا فقدناه
+          if [ ! -f "settings.gradle.kts" ]; then
             echo "include(':app')" > settings.gradle.kts
           fi
-          # 4. إعطاء صلاحية التشغيل
-          chmod +x gradlew || true
+          
+          chmod +x gradlew
 
       - name: set up JDK 17
         uses: actions/setup-java@v4
@@ -33,10 +36,10 @@ jobs:
           cache: gradle
 
       - name: Build APK
-        run: ./gradlew assembleDebug --stacktrace --no-daemon
+        run: ./gradlew assembleDebug --no-daemon
           
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: final-snake-game
+          name: snake-game-final
           path: "**/build/outputs/apk/debug/*.apk"

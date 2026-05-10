@@ -10,18 +10,23 @@ jobs:
       - name: Install Unrar
         run: sudo apt-get update && sudo apt-get install -y unrar
 
-      - name: Fix Directory Structure
+      - name: Force Clean and Structure
         run: |
-          # 1. فك ضغط أي ملف مضغوط موجود
+          # 1. فك ضغط أي ملف rar موجود
           find . -name "*.rar" -exec unrar x -o+ {} . \;
           
-          # 2. نقل ملفات Gradle للواجهة إذا كانت داخل مجلدات (مثل studant أو app)
-          find . -maxdepth 3 -name "gradlew" -exec cp {} . \;
-          find . -maxdepth 3 -name "settings.gradle*" -exec cp {} . \;
-          find . -maxdepth 3 -name "build.gradle*" -exec cp {} . \;
-          find . -maxdepth 3 -name "gradle" -type d -exec cp -r {} . \;
+          # 2. البحث عن ملفات التشغيل ونقلها للمكان الصحيح غصباً عنها
+          find . -name "gradlew" -exec cp {} . \;
+          find . -name "settings.gradle*" -exec cp {} . \;
+          find . -name "build.gradle*" -exec cp {} . \;
+          find . -name "gradle.properties" -exec cp {} . \;
+          find . -name "gradle" -type d -exec cp -r {} . \;
           
-          # 3. التأكد من صلاحيات التشغيل
+          # 3. التأكد من وجود ملف settings لربط المشروع
+          if [ ! -f "settings.gradle.kts" ] && [ ! -f "settings.gradle" ]; then
+            echo "include(':app')" > settings.gradle.kts
+          fi
+          
           chmod +x gradlew || true
 
       - name: set up JDK 17
@@ -37,5 +42,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: game-output
+          name: my-game-apk
           path: "**/build/outputs/apk/debug/*.apk"

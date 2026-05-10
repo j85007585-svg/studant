@@ -1,52 +1,23 @@
-name: The Force Build
+name: Search and Build
 on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Everything
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Preparation
+      - name: Extract
         run: |
-          sudo apt-get update
-          sudo apt-get install -y unrar zip
-
-      - name: The Great Extraction
-        run: |
-          # فك ضغط أي ملف مضغوط تجده في طريقك
+          sudo apt-get update && sudo apt-get install -y unrar
           find . -name "*.rar" -exec unrar x -o+ {} . \;
-          find . -name "*.zip" -exec unzip -o {} -d . \;
 
-      - name: The Project Reconstructor
+      - name: Locate and Build
         run: |
-          # البحث الشامل عن الملفات الحيوية ونقلها للمركز
-          find . -name "gradlew" -exec cp {} . \;
-          find . -name "settings.gradle*" -exec cp {} . \;
-          find . -name "build.gradle*" -exec cp {} . \;
-          find . -name "gradle.properties" -exec cp {} . \;
+          # البحث عن مكان وجود ملف gradlew الحقيقي
+          GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
+          PROJECT_ROOT=$(dirname "$GRADLEW_PATH")
           
-          # نقل مجلد الـ Gradle الأساسي
-          GRADLE_DIR=$(find . -name "wrapper" -type d | head -n 1 | sed 's/\/wrapper//')
-          if [ ! -z "$GRADLE_DIR" ]; then cp -r $GRADLE_DIR . ; fi
-          
-          # إعطاء صلاحية التشغيل القصوى
-          chmod -R 777 .
+          cd "$PROJECT_ROOT"
           chmod +x gradlew
-
-      - name: Setup Java Environment
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: THE FINAL BUILD
-        run: |
-          # بناء التطبيق مع تنظيف كامل للمخلفات
-          ./gradlew clean assembleDebug --stacktrace --no-daemon
-
-      - name: Artifact Delivery
-        uses: actions/upload-artifact@v4
-        with:
-          name: snake-game-ultimate
-          path: "**/build/outputs/apk/debug/*.apk"
+          ./gradlew assembleDebug --no-daemon

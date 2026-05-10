@@ -8,17 +8,22 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Unrar
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y unrar
+        run: sudo apt-get update && sudo apt-get install -y unrar
 
-      - name: Force Extract and Move
+      - name: Extract and Fix Files
         run: |
-          # فك ضغط كل شيء
+          # 1. فك ضغط ملف app.rar
           unrar x app.rar || true
-          # نقل الملفات من المجلد الفرعي للمجلد الرئيسي ليراها Gradle
-          cp -r app/* . || true
-          chmod +x gradlew
+          # 2. إذا كان الكود داخل مجلد اسمه app، سنخرجه للخارج
+          if [ -d "app" ]; then
+            cp -r app/* . || true
+          fi
+          # 3. التأكد من وجود ملف الإعدادات الأساسي
+          if [ ! -f "settings.gradle.kts" ] && [ ! -f "settings.gradle" ]; then
+            echo "include(':app')" > settings.gradle.kts
+          fi
+          # 4. إعطاء صلاحية التشغيل
+          chmod +x gradlew || true
 
       - name: set up JDK 17
         uses: actions/setup-java@v4
@@ -28,10 +33,10 @@ jobs:
           cache: gradle
 
       - name: Build APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
           
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: my-snake-game
+          name: final-snake-game
           path: "**/build/outputs/apk/debug/*.apk"
